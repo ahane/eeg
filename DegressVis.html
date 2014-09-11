@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<head>
+    <style>
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+    .axis text {
+        font-family: sans-serif;
+        font-size: 1em;
+        fill: #333;
+    }
+
+    .x.axis path {
+      display: none;
+    }
+
+    .line { 
+        fill: none;
+        stroke: #555;
+        stroke-width: 2px;
+        stroke-dasharray: 3, 2;
+        stroke-linejoin: round;
+    }
+
+    .linedots {
+        fill: #fff;
+        opacity: 0.8;
+        stroke: #333;
+        stroke-width: 2px;
+    }
+    .linedots.real {
+        fill: #fff;
+    }
+    .linedots.pred {
+        fill: #555;
+    }
+
+    .powerbar {
+        stroke: #333;
+        stroke-width: 1px;
+    }
+    .powerbar.real {
+        fill: steelblue;
+    }
+    .powerbar.pred {
+        fill: #555;
+    }
+
+
+    .corridors {
+        opacity: 0.8;
+    }
+    .corridors.b3 {
+        fill: #02818a;
+    }
+    .corridors.b2 {
+        fill: #67a9cf;
+    }
+    .corridors.b1 {
+        fill: #bdc9e1;
+    }
+    .corridors.c {
+        fill: #e5f5e0;
+    }
+    .corridors.a1 {
+        fill: #ffffb2;
+    }
+    .corridors.a2 {
+        fill: #fed976;
+    }
+    .corridors.a3 {
+        fill: #feb24c;
+    }
+    .corridors.a4 {
+        fill: #fd8d3c;
+    }
+    .corridors.a5 {
+        fill: #f03b20;
+    }
+    .corridors.a6 {
+        fill: #bd0026;
+    }
+    .annotation {
+        font-variant: small-caps;
+        font-family: sans-serif;
+        font-size: 0.6em;
+        opacity: 0.8;
+    }
+
+    .corridor-annotation {
+        //font-variant: small-caps;
+        font-family: sans-serif;
+        font-size: 1.3em;
+        //font-weight: bold;
+        #opacity: 0.8;
+        fill: #888;
+        letter-spacing: 0.132em;
+    }
+
+    .degress-annotation {
+        //font-variant: small-caps;
+        font-family: sans-serif;
+        font-size: 1.3em;
+        //font-weight: bold;
+        #opacity: 0.8;
+        fill: #888;
+        letter-spacing: 0.132em;
+    }
+
+    .degress-lables text {
+        font-family: sans-serif;
+        font-size: 0.9em;
+        font-weight: bold;
+        opacity: 0.8;
+        //font-color: #ffffff;
+        fill: #111;
+        text-anchor: end;
+
+    }
+
+    .boundary-lables text {
+        font-family: sans-serif;
+        font-size: 0.6em;
+        font-weight: 600;
+        text-anchor: end;
+    }
+
+    </style>
+</head>
+<body>
+    <script src="d3.min.js"></script>
+
+    <script>
+        var margin = {top: 50, right: 20, bottom: 30, left: 100},
+            width = 800 - margin.left - margin.right,
+            height = 1000 - margin.top - margin.bottom;
+            
+        var powerSumArea = { height: 260, width: width, padding: {right: 40} };
+        var powerBarsArea = { top: powerSumArea.height+2, height: 80, 
+                             width: powerSumArea.width, padding: {right: powerSumArea.padding.right }};
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.right + margin.left)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var dateFormat = d3.time.format("%Y-%m-%d");
+
+        
+
+        var xLine = d3.time.scale()
+            .range([0, powerSumArea.width - powerSumArea.padding.right]);
+            
+
+        var yLine = d3.scale.linear()
+            .range([powerSumArea.height, 0])
+            .domain([0, 8500]);
+
+        var xBars = d3.time.scale()
+            .range([0, powerBarsArea.width - powerBarsArea.padding.right]);
+
+        var yBars = d3.scale.linear()
+            .range([0, powerBarsArea.height]);
+
+        var xAxis = d3.svg.axis()
+            .scale(xLine)
+            .orient("top");
+
+        var yAxis = d3.svg.axis()
+            .scale(yLine)
+            .orient("left");
+
+        var yearlySumLine = d3.svg.line()
+            .x(function (d) { return xLine(d.month) })
+            .y(function (d) { return yLine(d.powerSum) });
+
+
+        var corridors = [
+            {from: 0, till: 1000, percStr: "+1,5", perc: 1.5, id: "b3"},
+            {from: 1000, till: 1500, percStr: "0,0", perc: 0, id: "b2"},
+            {from: 1500, till: 2400, percStr: "-0,2", perc:  -0.2, id: "b1"},
+            {from: 2400, till: 2600, percStr: "-0,5", perc: -0.5, id: "c"},
+            {from: 2600, till: 3500, percStr: "-1,0", perc: -1, id: "a1"},
+            {from: 3500, till: 4500, percStr: "-1,4", perc: -1.4, id: "a2"},
+            {from: 4500, till: 5500, percStr: "-1,8", perc: -1.8, id: "a3"},
+            {from: 5500, till: 6500, percStr: "-2,2", perc: -2.2, id: "a4"},
+            {from: 6500, till: 7500, percStr: "-2,5", perc: -2.5, id: "a5"},
+            {from: 7500, till: 8500, percStr: "-2,8", perc: -2.8, id: "a6"}
+        ];
+        
+        var corridorGroup = svg.append("g");
+
+        corridorGroup.selectAll("rect")
+            .data(corridors)
+            .enter()
+            .append("rect")
+            .attr("x", 0)
+            .attr("width", powerSumArea.width)
+            .attr("y", function (d) { return yLine(d.till); })
+            //.attr("height", function (d) { return y(d.till - d.from); })
+            .attr("height", function (d) { return (yLine(d.from) - yLine(d.till)); })
+            .attr("class", function (d) { return "corridors " + d.id; } );
+
+        corridorGroup.append("g")
+            .attr("class", "degress-lables")
+                .selectAll("text")
+                .data(corridors)
+                .enter()
+                .append("text")
+                .attr("x", powerSumArea.width - 5)
+                .attr("y", function (d) { return yLine(d.till); })
+                .attr("dy", function (d) { var middle = (yLine(d.from) - yLine(d.till)) / 2; return middle + 7; })
+                .attr("class", function (d) { return "" + d.id; } )
+                .text(function (d) { return d.percStr } );
+
+        corridorGroup.append("g")
+            .attr("class", "boundary-lables")
+            .selectAll("text")
+            .data(corridors)
+            .enter()
+            .append("text")
+                .attr("x", 0)
+                .attr("y", function (d) { return yLine(d.from); })
+                .attr("dy", function (d) { return (d.id == 'c' ? 5 : 1); })
+                .attr("dx", -5)
+                .attr("class", function (d) { return "" + d.id; } )
+                .text(function (d) { return d.from } );
+
+        corridorGroup.append("text")
+            .text("12 Monatiger Ausbau")
+            .attr("transform", "rotate(-90) translate(-250, -30)" )
+            .attr("class", "corridor-annotation");
+            //.attr("y", 200);
+
+        corridorGroup.append("text")
+            .text("Degressions Satz")
+            .attr("transform", "rotate(90) translate(50, -" + (width+5) + ")" )
+            .attr("class", "degress-annotation");
+            
+
+        corridorGroup.append("g").append("text")
+            .text("Zielkorridor")
+            .attr("x", 10)
+            .attr("y", yLine(2400))
+            .attr("class", "annotation");
+
+
+
+        d3.csv("exp_data/per_month_total_rolling_sum.csv", function (error, data) {
+            if(error) console.log(error);
+            console.log(error);
+            console.log(data);
+
+            //preprocess data
+            data.forEach(function (d) {
+                d.month = dateFormat.parse(d['date']);
+                d.powerSum = d['sumof_14_to_last']/1000;
+                d.kw = +d.kw;
+                d.mw = d.kw/1000;
+                d.real = !!(+d.real);
+            });
+
+            var dateExtent = d3.extent(data.map(function (d) { return d.month; }));
+            xLine.domain(dateExtent);
+            xBars.domain(dateExtent);
+            yBars.domain([0, d3.max(data.map(function (d) { return d.kw; })) ]);
+    
+            var keyOnDate = function (d) { return d.month;};
+
+            //draw axis
+            svg.append("g")
+                .attr("class", "x axis")
+               // .attr("transform", "translate(0, " + height + ")")
+                .call(xAxis);
+
+            var powerSumLine = svg.append("g")
+                .attr("class", "powersum");
+            console.log(powerSumLine);
+
+            powerSumLine.append("path")
+                .datum(data, keyOnDate)
+                .attr("class", "line")
+                //.attr("transform", "translate(" + margin.left + ", 0)")
+                .attr("d", yearlySumLine);
+
+            powerSumLine.selectAll("circle")
+                .data(data, keyOnDate)
+                .enter()
+                .append("circle")
+                .attr("cx", function (d) { return xLine(d.month); })
+                .attr("cy", function (d) { return yLine(d.powerSum); })
+                .attr("r", "4")
+                .attr("class", function (d) { return "linedots " + (d.real ? "real":"pred"); })
+                .append("svg:title")
+                    .text(function (d) { return Math.round(d.powerSum, 2) + " MWp"; });
+
+
+            var barWidth = (powerBarsArea.width / data.length)-8;
+            var powerBars = svg.append("g")
+                .attr("class", "powerbars");
+
+            powerBars.selectAll("rect")
+                .data(data.slice(1), keyOnDate) // we remove the first elem, as it is overhanging
+                .enter()
+                .append("rect")
+                .attr("x", function (d) { return xBars(d.month) - barWidth+4; })
+                .attr("y", powerBarsArea.top)
+                .attr("width", barWidth)
+                .attr("height", function (d) { return yBars(d.kw); })
+                .attr("class", function (d) { return "powerbar " + (d.real ? "real" : "pred"); });
+
+
+        });
+    </script>
+</body>
+
