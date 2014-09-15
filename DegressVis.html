@@ -17,7 +17,38 @@
       display: none;
     }
 
-    .line { 
+    .y.axis path {
+        display: none;
+    }
+    .y.axis text {
+        font-family: sans-serif;
+        font-size: 0.6em;
+        fill: #333;
+    }
+    .y.axis.bars line {
+        stroke: #777;
+        stroke-dasharray: 2,2;
+    }
+
+    .totalsumgroup  .line { 
+        fill: none;
+        stroke: #555;
+        stroke-width: 1px;
+       // stroke-dasharray: 3, 2;
+       // stroke-linejoin: round;
+    }
+
+    .y.axis.totalsum line {
+        stroke: #fdfdfd;
+        stroke-dasharray: 2,2;
+    }
+
+    .totalsumgroup .background {
+        fill: #ddd;
+    }
+
+
+    .powersum .line { 
         fill: none;
         stroke: #555;
         stroke-width: 2px;
@@ -95,9 +126,19 @@
         font-family: sans-serif;
         font-size: 1.3em;
         //font-weight: bold;
-        #opacity: 0.8;
+        
         fill: #888;
         letter-spacing: 0.132em;
+    }
+
+    .monthly-annotation {
+        //font-variant: small-caps;
+        font-family: sans-serif;
+        font-size: 1.3em;
+        //font-weight: bold;
+        fill: #888;
+        
+        
     }
 
     .degress-annotation {
@@ -114,9 +155,9 @@
         font-family: sans-serif;
         font-size: 0.9em;
         font-weight: bold;
-        opacity: 0.8;
+        //opacity: 0.8;
         //font-color: #ffffff;
-        fill: #111;
+        fill: #444;
         text-anchor: end;
 
     }
@@ -124,7 +165,7 @@
     .boundary-lables text {
         font-family: sans-serif;
         font-size: 0.6em;
-        font-weight: 600;
+        fill: #333;
         text-anchor: end;
     }
 
@@ -138,9 +179,12 @@
             width = 800 - margin.left - margin.right,
             height = 1000 - margin.top - margin.bottom;
             
-        var powerSumArea = { height: 260, width: width, padding: {right: 40} };
-        var powerBarsArea = { top: powerSumArea.height+2, height: 80, 
-                             width: powerSumArea.width, padding: {right: powerSumArea.padding.right }};
+        var totalSumArea = { height: 30, top: 0}
+        var powerSumArea = { height: 260, width: width, top: totalSumArea.height+5, padding: {right: 40} };
+        totalSumArea.width = width - powerSumArea.padding.right;
+        var powerBarsArea = { top: powerSumArea.top + powerSumArea.height+2, height: 80, 
+                             width: width - powerSumArea.padding.right, 
+                             padding: {right: powerSumArea.padding.right }};
 
         var svg = d3.select("body").append("svg")
             .attr("width", width + margin.right + margin.left)
@@ -152,30 +196,43 @@
 
         
 
-        var xLine = d3.time.scale()
-            .range([0, powerSumArea.width - powerSumArea.padding.right]);
+        var x = d3.time.scale()
+            .range([0, width - powerSumArea.padding.right]);
             
+        var yTotalLine = d3.scale.linear()
+            .range([totalSumArea.height, 0]);
 
         var yLine = d3.scale.linear()
             .range([powerSumArea.height, 0])
             .domain([0, 8500]);
 
-        var xBars = d3.time.scale()
-            .range([0, powerBarsArea.width - powerBarsArea.padding.right]);
-
         var yBars = d3.scale.linear()
             .range([0, powerBarsArea.height]);
 
         var xAxis = d3.svg.axis()
-            .scale(xLine)
+            .scale(x)
+            .ticks(10)
             .orient("top");
 
-        var yAxis = d3.svg.axis()
+        /*var yAxis = d3.svg.axis()
             .scale(yLine)
+            .orient("left");*/
+
+  
+
+        var yAxisBars = d3.svg.axis()
+            .scale(yBars)
+            .tickValues([100, 200, 300])
+            .tickSize(powerBarsArea.width)
             .orient("left");
 
+
+        var totalLine = d3.svg.line()
+            .x(function (d) { return x(d.month) })
+            .y(function (d) { return yTotalLine(d.totalMw) });
+
         var yearlySumLine = d3.svg.line()
-            .x(function (d) { return xLine(d.month) })
+            .x(function (d) { return x(d.month) })
             .y(function (d) { return yLine(d.powerSum) });
 
 
@@ -192,9 +249,33 @@
             {from: 7500, till: 8500, percStr: "-2,8", perc: -2.8, id: "a6"}
         ];
         
-        var corridorGroup = svg.append("g");
 
-        corridorGroup.selectAll("rect")
+        svg.append("text")
+            .text("Totaler")
+            //.attr("transform", "rotate(-90) translate(-30, -35)" )
+            .attr("transform", " translate(-100, "+(totalSumArea.height-14)+")" )
+            .attr("class", "monthly-annotation");
+            //.attr("y", 200);
+
+        svg.append("text")
+            .text("Ausbau")
+            //.attr("transform", "rotate(-90) translate(-30, -35)" )
+            .attr("transform", " translate(-100, "+(totalSumArea.height)+")" )
+            .attr("class", "monthly-annotation");
+        
+
+        svg.append("text")
+            .text("Ausbau")
+            //.attr("transform", "rotate(-90) translate(-30, -35)" )
+            .attr("transform", " translate(-100, "+(powerSumArea.height+powerBarsArea.height+20)+")" )
+            .attr("class", "monthly-annotation");
+            //.attr("y", 200);
+
+        var powerSumGroup = svg.append("g")
+            .attr("class", "corridor-group")
+            .attr("transform", "translate(0, " + powerSumArea.top +")" );
+
+        powerSumGroup.selectAll("rect")
             .data(corridors)
             .enter()
             .append("rect")
@@ -205,7 +286,7 @@
             .attr("height", function (d) { return (yLine(d.from) - yLine(d.till)); })
             .attr("class", function (d) { return "corridors " + d.id; } );
 
-        corridorGroup.append("g")
+        powerSumGroup.append("g")
             .attr("class", "degress-lables")
                 .selectAll("text")
                 .data(corridors)
@@ -217,7 +298,7 @@
                 .attr("class", function (d) { return "" + d.id; } )
                 .text(function (d) { return d.percStr } );
 
-        corridorGroup.append("g")
+        powerSumGroup.append("g")
             .attr("class", "boundary-lables")
             .selectAll("text")
             .data(corridors)
@@ -230,19 +311,21 @@
                 .attr("class", function (d) { return "" + d.id; } )
                 .text(function (d) { return d.from } );
 
-        corridorGroup.append("text")
+        powerSumGroup.append("text")
             .text("12 Monatiger Ausbau")
-            .attr("transform", "rotate(-90) translate(-250, -30)" )
+            .attr("transform", "rotate(-90) translate(-"+(powerSumArea.height-0)+", -37)" )
             .attr("class", "corridor-annotation");
             //.attr("y", 200);
 
-        corridorGroup.append("text")
+        
+
+        powerSumGroup.append("text")
             .text("Degressions Satz")
             .attr("transform", "rotate(90) translate(50, -" + (width+5) + ")" )
             .attr("class", "degress-annotation");
             
 
-        corridorGroup.append("g").append("text")
+        powerSumGroup.append("g").append("text")
             .text("Zielkorridor")
             .attr("x", 10)
             .attr("y", yLine(2400))
@@ -252,46 +335,80 @@
 
         d3.csv("exp_data/per_month_total_rolling_sum.csv", function (error, data) {
             if(error) console.log(error);
-            console.log(error);
-            console.log(data);
+            //console.log(error);
+            //console.log(data);
 
             //preprocess data
             data.forEach(function (d) {
                 d.month = dateFormat.parse(d['date']);
-                d.powerSum = d['sumof_14_to_last']/1000;
+                d.powerSum = d['past_12_months']/1000;
+                d.totalMw = d['absolute_kw']/1000;
                 d.kw = +d.kw;
                 d.mw = d.kw/1000;
                 d.real = !!(+d.real);
             });
 
-            var dateExtent = d3.extent(data.map(function (d) { return d.month; }));
-            xLine.domain(dateExtent);
-            xBars.domain(dateExtent);
-            yBars.domain([0, d3.max(data.map(function (d) { return d.kw; })) ]);
+            //we complete our scales
+            
+            var TOTALMAX = 52000; //ab hier wird nicht mehr gefördert
+            var dateExtent = d3.extent(data, function (d) { return d.month; });
+            yTotalLine.domain([d3.min(data, function (d) { return d.totalMw; }), TOTALMAX]);
+            x.domain(dateExtent);
+            
+            yBars.domain([0, d3.max(data, function (d) { return d.mw; })]);
     
             var keyOnDate = function (d) { return d.month;};
 
             //draw axis
-            svg.append("g")
+            /*svg.append("g")
                 .attr("class", "x axis")
                // .attr("transform", "translate(0, " + height + ")")
                 .call(xAxis);
+*/
+            //we draw the total
+            var yAxisTotal = d3.svg.axis()
+            .scale(yTotalLine)
+            .tickValues([d3.min(data, function (d) { return d.totalMw; }), d3.max(data, function (d) { return d.totalMw; }), TOTALMAX])
+            .tickSize(totalSumArea.width)
+            .orient("left");
 
-            var powerSumLine = svg.append("g")
+
+            var totalSumGroup = svg.append("g")
+                .attr("class", "totalsumgroup");
+
+            totalSumGroup.append("rect")
+                .attr("class", "background totalsum")
+                .attr("width", totalSumArea.width)
+                .attr("height", totalSumArea.height);
+
+            totalSumGroup.append("g")
+                .attr("class", "y axis totalsum")
+                .attr("transform", "translate("+totalSumArea.width+", 0)")
+                .call(yAxisTotal);
+
+            //console.log(totalSumGroup);
+            var totalSumLine = totalSumGroup.append("path")
+                .datum(data, keyOnDate)
+                .attr("class", "line")
+                .attr("d", totalLine);
+
+
+            //we draw the 12-month sums
+            //the line
+            var powerSumLine = powerSumGroup.append("g")
                 .attr("class", "powersum");
-            console.log(powerSumLine);
-
+            
             powerSumLine.append("path")
                 .datum(data, keyOnDate)
                 .attr("class", "line")
                 //.attr("transform", "translate(" + margin.left + ", 0)")
                 .attr("d", yearlySumLine);
-
+            //and some dots on top
             powerSumLine.selectAll("circle")
                 .data(data, keyOnDate)
                 .enter()
                 .append("circle")
-                .attr("cx", function (d) { return xLine(d.month); })
+                .attr("cx", function (d) { return x(d.month); })
                 .attr("cy", function (d) { return yLine(d.powerSum); })
                 .attr("r", "4")
                 .attr("class", function (d) { return "linedots " + (d.real ? "real":"pred"); })
@@ -299,18 +416,25 @@
                     .text(function (d) { return Math.round(d.powerSum, 2) + " MWp"; });
 
 
-            var barWidth = (powerBarsArea.width / data.length)-8;
-            var powerBars = svg.append("g")
+            //We draw the monthly barchart
+             var powerBarsGroup = svg.append("g")
                 .attr("class", "powerbars");
 
-            powerBars.selectAll("rect")
+            powerBarsGroup.append("g")
+                .attr("class", "y axis bars")
+                .attr("transform", "translate("+powerBarsArea.width+", "+powerBarsArea.top+")")
+                .call(yAxisBars);
+            var barWidth = (powerBarsArea.width / data.length)-8;
+           
+
+            powerBarsGroup.selectAll("rect")
                 .data(data.slice(1), keyOnDate) // we remove the first elem, as it is overhanging
                 .enter()
                 .append("rect")
-                .attr("x", function (d) { return xBars(d.month) - barWidth+4; })
+                .attr("x", function (d) { return x(d.month) - barWidth+4; })
                 .attr("y", powerBarsArea.top)
                 .attr("width", barWidth)
-                .attr("height", function (d) { return yBars(d.kw); })
+                .attr("height", function (d) { return yBars(d.mw); })
                 .attr("class", function (d) { return "powerbar " + (d.real ? "real" : "pred"); });
 
 
